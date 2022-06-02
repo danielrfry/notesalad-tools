@@ -29,7 +29,7 @@ For full functionality, install optional packages:
 ```
 # For realtime playback using OPL/OPM emulators:
 pip install pyaudio
-# For MIDI-related functionality:
+# For MIDI functionality:
 pip install mido python-rtmidi
 ```
 
@@ -39,7 +39,7 @@ This section contains a few examples showing some of the available functionality
 
 ### nsplay
 
-Play VGM, VGZ, DRO and MID files or render to WAV output. (Playback is likely to work smoothly only on macOS for the moment).
+Play VGM, VGZ, DRO and MID files or render to WAV output.
 
 Playing files:
 
@@ -79,7 +79,7 @@ nsconvert --start 1:23 --duration 20 Marbles.dro Marbles.vgz
 
 ### nsmidi
 
-Route MIDI events between physical MIDI ports and Note Salad's OPL/OPM MIDI implementation and emulators. Allows playing sounds in realtime using a MIDI controller, for example. (Realtime playback is likely to work smoothly only on macOS for now).
+Route MIDI events between physical MIDI ports and Note Salad's OPL/OPM MIDI implementation and emulators. Allows playing sounds in realtime using a MIDI controller, for example.
 
 Listing MIDI ports:
 
