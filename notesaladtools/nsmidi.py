@@ -109,11 +109,13 @@ def main():
         try:
             for msg in input_dev:
                 if msg is None:
-                    time.sleep(0.001)
                     if isinstance(output_dev, VGMMIDIOutput):
                         cur_time_ms = floor(time.perf_counter() * 1000)
                         output_dev.set_time(cur_time_ms)
                         output_dev.update()
+                        output_dev.device.wait(0.001)
+                    else:
+                        time.sleep(0.001)
                 else:
                     if hasattr(msg, 'channel'):
                         if msg.channel in ignore_channels:
