@@ -1,6 +1,7 @@
 from io import BufferedWriter
 from threading import Lock
 import struct
+import time
 
 from .events import OPMWriteEvent
 
@@ -89,6 +90,7 @@ class OPMUSBSerial(OPMChip):
     def __init__(self, device_path):
         from serial import Serial
         self.device = BufferedWriter(Serial(device_path, 115200))
+        self.last_wait_time = None
 
     def write(self, reg, value):
         reg = reg & 0xff
@@ -97,6 +99,17 @@ class OPMUSBSerial(OPMChip):
 
     def flush(self):
         self.device.flush()
+
+    def wait(self, wait_time):
+        self.flush()
+        if wait_time > 0:
+            now = time.monotonic()
+            if self.last_wait_time is None:
+                self.last_wait_time = now
+            delay = (self.last_wait_time + wait_time) - now
+            if delay > 0:
+                time.sleep(delay)
+            self.last_wait_time = self.last_wait_time + wait_time
 
     def reset(self):
         self.device.write(b'\xff\x00\x01')

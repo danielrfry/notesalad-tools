@@ -191,15 +191,26 @@ class OPLUSBSerial(OPLChip):
     def __init__(self, device_path):
         from serial import Serial
         self.device = BufferedWriter(Serial(device_path, 115200))
+        self.last_wait_time = None
 
     def write(self, reg, value):
-        print(f"{reg:03x}: {value:02x}")
         port = (reg & 0x100) >> 8
         reg = reg & 0xff
         self.device.write(struct.pack('<BBB', port, reg, value))
 
     def flush(self):
         self.device.flush()
+
+    def wait(self, wait_time):
+        self.flush()
+        if wait_time > 0:
+            now = time.monotonic()
+            if self.last_wait_time is None:
+                self.last_wait_time = now
+            delay = (self.last_wait_time + wait_time) - now
+            if delay > 0:
+                time.sleep(delay)
+            self.last_wait_time = self.last_wait_time + wait_time
 
     def reset(self):
         self.device.write(b'\xff\x00\x01')

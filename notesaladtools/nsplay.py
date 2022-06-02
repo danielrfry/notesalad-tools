@@ -21,9 +21,7 @@ def main():
             last_event_time = 0
             for event in vgmparser.read_events():
                 chip.wait((event.time - last_event_time) / vgmparser.time_base)
-
                 chip.write_event(event)
-
                 last_event_time = event.time
 
             chip.wait((vgmparser.duration - last_event_time) /
