@@ -1,6 +1,7 @@
 from io import BufferedWriter
 from threading import Lock
 import struct
+import math
 
 from .events import OPMWriteEvent
 
@@ -145,7 +146,7 @@ class OPMWAV(OPMChip):
 
 
 class OPMEmulator(OPMChip):
-    def __init__(self, sample_rate=44100):
+    def __init__(self, sample_rate=44100, buffer_size=1024):
         import pyaudio
         from notesalad import opm
         self.sample_rate = sample_rate
@@ -156,21 +157,23 @@ class OPMEmulator(OPMChip):
         self.p = pyaudio.PyAudio()
         self.opm_device = opm.OPMEmulator(self.sample_rate)
         self.stream = self.p.open(format=pyaudio.paInt16, channels=2, rate=self.sample_rate,
-                                  output=True, stream_callback=lambda *args: self._stream_cbk(*args))
-        self._cur_write_pos = 0  # Samples
-        self._cur_play_pos = 0  # Samples
+                                  output=True, frames_per_buffer=buffer_size,
+                                  stream_callback=lambda *args: self._stream_cbk(*args))
+        self._stream_start_time = self.stream.get_time()
+        self._render_pos = 0
 
     def _stream_cbk(self, _in_data, frame_count, _time_info, _status):
         pending_writes = []
-        buf_start = self._cur_play_pos
-        last_event_pos = buf_start
-        self._cur_play_pos = self._cur_play_pos + frame_count
+        buffer_start_pos = self._render_pos - frame_count
+        buffer_end_pos = self._render_pos
         with self._queue_lock:
-            while len(self._write_queue) > 0 and self._write_queue[0][0] <= self._cur_play_pos:
-                (time, reg, value) = self._write_queue.pop(0)
-                time = max(last_event_pos, time)
-                pending_writes.append((time - last_event_pos, reg, value))
-                last_event_pos = time
+            last_event_pos = buffer_start_pos
+            while len(self._write_queue) > 0 and self._write_queue[0][0] < buffer_end_pos:
+                (evt_pos, reg, value) = self._write_queue.pop(0)
+                evt_pos = max(last_event_pos, evt_pos)
+                delay_samples = math.floor(evt_pos - last_event_pos)
+                pending_writes.append((delay_samples, reg, value))
+                last_event_pos = evt_pos
         data = bytearray(frame_count * 4)
         buf_pos = 0
         for write in pending_writes:
@@ -184,23 +187,25 @@ class OPMEmulator(OPMChip):
                 self.opm_device.write(reg, value)
         if frame_count - buf_pos > 0:
             self.opm_device.get_samples(data, buf_pos, frame_count - buf_pos)
+        self._render_pos = self._render_pos + frame_count
         return (bytes(data), self.pyaudio.paContinue)
 
     def write(self, reg, value):
-        reg = reg & 0xff
+        reg = reg & 0x1ff
+        t = (self.stream.get_time() - self._stream_start_time) * self.sample_rate
         with self._queue_lock:
-            self._write_queue.append((self._cur_write_pos, reg, value))
+            self._write_queue.append((t, reg, value))
 
     def reset(self):
+        t = (self.stream.get_time() - self._stream_start_time) * self.sample_rate
         with self._queue_lock:
-            self._write_queue.append((self._cur_write_pos, None, None))
+            self._write_queue.append((t, None, None))
 
     def flush(self):
         pass
 
-    def wait(self, time):
-        self._cur_write_pos = self._cur_write_pos + \
-            round(time * self.sample_rate)
+    def wait(self, _wait_time):
+        pass
 
     def close(self):
         self.stream.stop_stream()
