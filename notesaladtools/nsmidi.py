@@ -9,11 +9,11 @@ from .midi import OPL2EmulatorOutput, OPL3EmulatorOutput, OPMEmulatorOutput, Std
 
 def list_devices():
     print('Input devices:')
-    for dev in mido.get_input_names():
+    for dev in sorted(set(mido.get_input_names())):
         print('  mido:' + dev)
     print('  file:<path>')
     print('Output devices:')
-    for dev in mido.get_output_names():
+    for dev in sorted(set(mido.get_output_names())):
         print('  mido:' + dev)
     print('  opl2em')
     print('  opl3em')
