@@ -7,7 +7,7 @@ This is a collection of tools written in Python for converting, manipulating and
 ### Requirements
 
 - [libnotesalad](https://github.com/danielrfry/notesalad)
-- Python 3 (I use 3.8.x, other versions may work)
+- Python 3
 
 I recommend installing in a [virtualenv](https://pypi.org/project/virtualenv/) to avoid conflicts with other packages.
 
