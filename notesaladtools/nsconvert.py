@@ -74,14 +74,14 @@ def main():
             events = vgmparser.read_events()
 
             # Set up filters
-            if args.trim_start_silence:
-                events = trim_start_silence(events)
-            elif args.trim_start_to_marker:
+            if args.trim_start_to_marker:
                 events = trim_start_to_marker(
                     events, args.trim_start_to_marker[0])
-            elif args.start is not None:
+            if args.start is not None:
                 start_time = int(args.start[0] * vgmparser.time_base)
-                events = trim_start_to_time(events, start_time)
+                events = trim_start_to_time(events, start_time)            
+            if args.trim_start_silence:
+                events = trim_start_silence(events)
             if args.duration is not None:
                 duration = int(args.duration[0] * vgmparser.time_base)
                 events = set_endpoint(events, duration)
