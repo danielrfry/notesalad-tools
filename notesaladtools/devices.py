@@ -1,4 +1,4 @@
-from .opl import OPLController, OPLUSBSerial, OPLWAV, OPLEmulator
+from .opl import OPLController, OPLUSBSerial, OPLWAV, OPLEmulator, RetroWaveOPL3
 from .opm import OPMController, OPMUSBSerial, OPMWAV, OPMEmulator
 
 
@@ -13,6 +13,8 @@ def get_device(name):
         (devtype, path) = parts
         if devtype == 'oplser':
             return OPLController(OPLUSBSerial(path))
+        if devtype == 'rwave':
+            return OPLController(RetroWaveOPL3(path))
         if devtype == 'oplwav':
             return OPLController(OPLWAV(path))
         if devtype == 'opmser':
