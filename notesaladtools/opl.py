@@ -256,9 +256,7 @@ class RetroWaveOPL3(OPLChip):
 
     def reset(self):
         self._spi_write((0x42, 0x12, 0xfe))
-        time.sleep(0.1)
         self._spi_write((0x42, 0x12, 0xff))
-        time.sleep(0.1)
         self.buffered_writes = []
 
 
