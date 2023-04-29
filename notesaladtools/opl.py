@@ -166,6 +166,9 @@ class OPLController:
 class OPLChip:
     realtime = True
 
+    def __init__(self):
+        self.last_wait_time = None
+
     def write(self, reg, value):
         raise NotImplementedError()
 
@@ -173,7 +176,15 @@ class OPLChip:
         raise NotImplementedError()
 
     def wait(self, wait_time):
-        pass
+        self.flush()
+        if wait_time > 0:
+            now = time.monotonic()
+            if self.last_wait_time is None:
+                self.last_wait_time = now
+            delay = (self.last_wait_time + wait_time) - now
+            if delay > 0:
+                time.sleep(delay)
+            self.last_wait_time = self.last_wait_time + wait_time
 
     def reset(self):
         raise NotImplementedError()
@@ -190,9 +201,9 @@ class OPLChip:
 
 class OPLUSBSerial(OPLChip):
     def __init__(self, device_path):
+        super().__init__()
         from serial import Serial
         self.device = BufferedWriter(Serial(device_path, 115200))
-        self.last_wait_time = None
 
     def write(self, reg, value):
         port = (reg & 0x100) >> 8
@@ -201,17 +212,6 @@ class OPLUSBSerial(OPLChip):
 
     def flush(self):
         self.device.flush()
-
-    def wait(self, wait_time):
-        self.flush()
-        if wait_time > 0:
-            now = time.monotonic()
-            if self.last_wait_time is None:
-                self.last_wait_time = now
-            delay = (self.last_wait_time + wait_time) - now
-            if delay > 0:
-                time.sleep(delay)
-            self.last_wait_time = self.last_wait_time + wait_time
 
     def reset(self):
         self.device.write(b'\xff\x00\x01')
@@ -224,9 +224,9 @@ class OPLUSBSerial(OPLChip):
 
 class RetroWaveOPL3(OPLChip):
     def __init__(self, device_path):
+        super().__init__()
         from serial import Serial
         self.device = BufferedWriter(Serial(device_path, 115200))
-        self.last_wait_time = None
         self.buffered_writes = []
 
     def write(self, reg, value):
@@ -245,17 +245,6 @@ class RetroWaveOPL3(OPLChip):
 
         self._spi_write(data)
         self.buffered_writes = []
-
-    def wait(self, wait_time):
-        self.flush()
-        if wait_time > 0:
-            now = time.monotonic()
-            if self.last_wait_time is None:
-                self.last_wait_time = now
-            delay = (self.last_wait_time + wait_time) - now
-            if delay > 0:
-                time.sleep(delay)
-            self.last_wait_time = self.last_wait_time + wait_time
 
     def _spi_write(self, data):
         packet = bytearray()
@@ -277,6 +266,7 @@ class OPLWAV(OPLChip):
     realtime = False
 
     def __init__(self, wav_path, sample_rate=49716):
+        super().__init__()
         import wave
         from notesalad import opl
         self.sample_rate = sample_rate
@@ -313,6 +303,7 @@ class OPLWAV(OPLChip):
 
 class OPLEmulator(OPLChip):
     def __init__(self, sample_rate=44100):
+        super().__init__()
         import pyaudio
         from notesalad import opl
         self.sample_rate = sample_rate
