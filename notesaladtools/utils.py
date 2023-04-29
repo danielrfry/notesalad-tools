@@ -39,3 +39,25 @@ def convert_time_base(src_time, src_time_base, dest_time_base):
     seconds = src_time // src_time_base
     fraction = (src_time % src_time_base) / src_time_base
     return round((seconds * dest_time_base) + (fraction * dest_time_base))
+
+
+def retrowave_7bit_encode(data: bytes, flag: bool) -> bytes:
+    output = bytearray()
+
+    if len(data) < 1:
+        return output
+
+    flag_bit = 0x01 if flag else 0x00
+
+    bit_offset = 0
+    for input_byte in data:
+        if bit_offset == 0:
+            output.append(input_byte | flag_bit)
+            output.append(((input_byte << 7) & 0xff) | flag_bit)
+            bit_offset = 2
+        else:
+            output[-1] |= (input_byte >> (bit_offset - 1)) & 0x7f
+            output.append(((input_byte << (8 - bit_offset)) & 0xff) | flag_bit)
+            bit_offset = (bit_offset + 1) % 8
+
+    return output

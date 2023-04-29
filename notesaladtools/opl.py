@@ -3,6 +3,7 @@ from threading import Lock
 import struct
 import time
 from .events import OPLWriteEvent
+from .utils import retrowave_7bit_encode
 
 reg_slot_map = {
     0x00:  0, 0x01:   1,  0x02:  2,  0x03:  3,  0x04:  4,  0x05:  5,  0x08:  6,  0x09:  7,  0x0a:  8,  0x0b:  9,
@@ -219,6 +220,57 @@ class OPLUSBSerial(OPLChip):
 
     def close(self):
         self.device.close()
+
+
+class RetroWaveOPL3(OPLChip):
+    def __init__(self, device_path):
+        from serial import Serial
+        self.device = BufferedWriter(Serial(device_path, 115200))
+        self.last_wait_time = None
+        self.buffered_writes = []
+
+    def write(self, reg, value):
+        self.buffered_writes.append((reg, value))
+
+    def flush(self):
+        data = bytearray()
+        for reg, value in self.buffered_writes:
+            port = (reg & 0x100) >> 8
+            reg = reg & 0xff
+            value = value & 0xff
+            if port == 0:
+                data.extend((0x42, 0x12, 0xe1, reg, 0xe3, value, 0xfb, value))
+            elif port == 1:
+                data.extend((0x42, 0x12, 0xe5, reg, 0xe7, value, 0xfb, value))
+
+        self._spi_write(data)
+        self.buffered_writes = []
+
+    def wait(self, wait_time):
+        self.flush()
+        if wait_time > 0:
+            now = time.monotonic()
+            if self.last_wait_time is None:
+                self.last_wait_time = now
+            delay = (self.last_wait_time + wait_time) - now
+            if delay > 0:
+                time.sleep(delay)
+            self.last_wait_time = self.last_wait_time + wait_time
+
+    def _spi_write(self, data):
+        packet = bytearray()
+        packet.append(0x00)
+        packet.extend(retrowave_7bit_encode(data, True))
+        packet.append(0x02)
+        self.device.write(packet)
+        self.device.flush()
+
+    def reset(self):
+        self._spi_write((0x42, 0x12, 0xfe))
+        time.sleep(0.1)
+        self._spi_write((0x42, 0x12, 0xff))
+        time.sleep(0.1)
+        self.buffered_writes = []
 
 
 class OPLWAV(OPLChip):
